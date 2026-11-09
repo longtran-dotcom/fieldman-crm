@@ -117,6 +117,19 @@ td .sub{color:var(--mute);font-size:12px}
   </form>
 </section>
 
+<section id="recovery" class="hidden">
+  <form class="login-card" id="recoveryForm">
+    <h1>Đặt lại mật khẩu</h1>
+    <p>Nhập mật khẩu mới cho tài khoản Fieldman CRM.</p>
+    <label for="newPassword">Mật khẩu mới</label>
+    <input id="newPassword" type="password" autocomplete="new-password" minlength="6" required>
+    <label for="confirmPassword">Nhập lại mật khẩu mới</label>
+    <input id="confirmPassword" type="password" autocomplete="new-password" minlength="6" required>
+    <div class="err" id="recoveryErr" role="alert"></div>
+    <button class="primary" id="recoveryBtn">Lưu mật khẩu</button>
+  </form>
+</section>
+
 <section id="app" class="hidden">
   <header>
     <button id="filtbtn">Bộ lọc</button>
@@ -214,6 +227,8 @@ td .sub{color:var(--mute);font-size:12px}
 const SUPABASE_URL = "https://nuxwqqrvzlhnwpldghtt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_KN7gFx1syi1lAftFP39iGQ_tmr150V2";   // khóa publishable/anon: công khai theo thiết kế, dữ liệu được bảo vệ bởi RLS
 
+const authLink = new URLSearchParams(location.hash.slice(1));
+let recovering = authLink.get("type") === "recovery";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -227,7 +242,7 @@ const provName = {}, regName = {};
 const canMoney = () => S.me && ["admin","region_manager"].includes(S.me.role);
 
 function toast(msg, ms=2800){ const t=$("toast"); t.textContent=msg; t.classList.remove("hidden"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.add("hidden"),ms); }
-function viewMode(m){ $("login").classList.toggle("hidden", m!=="login"); $("app").classList.toggle("hidden", m!=="app"); }
+function viewMode(m){ $("recovery").classList.toggle("hidden", m!=="recovery"); $("login").classList.toggle("hidden", m!=="login"); $("app").classList.toggle("hidden", m!=="app"); }
 
 /* ===== ĐĂNG NHẬP ===== */
 $("loginForm").addEventListener("submit", async e=>{
@@ -239,9 +254,39 @@ $("loginForm").addEventListener("submit", async e=>{
 });
 $("logoutBtn").onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
+$("recoveryForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const password = $("newPassword").value;
+  const errorBox = $("recoveryErr");
+  errorBox.textContent = "";
+  if(password !== $("confirmPassword").value){
+    errorBox.textContent = "Hai mật khẩu chưa khớp.";
+    return;
+  }
+  $("recoveryBtn").disabled = true;
+  try {
+    const {error} = await sb.auth.updateUser({password});
+    if(error){ errorBox.textContent = error.message; return; }
+    $("recoveryForm").reset();
+    recovering = false;
+    await boot();
+  } catch {
+    errorBox.textContent = "Không thể lưu mật khẩu. Vui lòng thử lại.";
+  } finally {
+    $("recoveryBtn").disabled = false;
+  }
+});
+
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session){ viewMode("login"); return; }
+  if(!session){
+    viewMode("login");
+    if(recovering || authLink.has("error_code")){
+      $("loginErr").textContent = "Link khôi phục không hợp lệ hoặc đã hết hạn. Hãy yêu cầu email mới.";
+    }
+    return;
+  }
+  if(recovering){ viewMode("recovery"); return; }
   const email = session.user.email;
   const {data:me, error} = await sb.from("staff").select("id,full_name,email,role,region_id").ilike("email", email).maybeSingle();
   if(error || !me){
@@ -492,7 +537,16 @@ $("saveViewBtn").onclick=()=>{ const n=prompt("Tên bộ lọc:"); if(!n) return
 $("viewSel").onchange=e=>{ const v=getViews()[e.target.value]; if(v){ setFilterState(v); refilter(); } };
 $("delViewBtn").onclick=()=>{ const n=$("viewSel").value; if(!n) return; const v=getViews(); delete v[n]; try{localStorage.setItem(VKEY,JSON.stringify(v));}catch(e){} loadViews(); };
 
-sb.auth.onAuthStateChange((ev)=>{ if(ev==="SIGNED_OUT") viewMode("login"); });
+sb.auth.onAuthStateChange(ev=>{
+  if(ev==="PASSWORD_RECOVERY"){
+    recovering = true;
+    viewMode("recovery");
+  }
+  if(ev==="SIGNED_OUT"){
+    recovering = false;
+    viewMode("login");
+  }
+});
 boot();
 </script>
 </body>
