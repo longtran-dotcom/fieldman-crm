@@ -54,7 +54,7 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;padding:14px;ga
 .toolbar select{width:auto}
 .bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--soft);border:1px solid var(--brand);border-radius:10px;padding:8px 12px}
 .tablewrap{flex:1;min-height:0;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;min-width:900px}
+table{border-collapse:collapse;width:100%;min-width:1500px}
 th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;z-index:1}
 tbody tr{cursor:pointer}
@@ -141,14 +141,14 @@ td .sub{color:var(--mute);font-size:12px}
   <div class="layout">
     <aside id="filters">
       <h3>Tìm kiếm</h3>
-      <input id="f_q" placeholder="Tên chủ hộ, MST, số điện thoại">
+      <input id="f_q" placeholder="Tên chủ hộ, MST, SĐT, mã Fieldman">
       <h3>Khu vực</h3>
       <select id="f_region"><option value="">Tất cả vùng</option></select>
       <div style="height:8px"></div>
       <select id="f_province"><option value="">Tất cả tỉnh/thành</option></select>
       <div style="height:8px"></div>
       <input id="f_ward" placeholder="Phường/xã (gõ một phần tên)">
-      <h3>Ngành nghề</h3>
+      <h3>Ngành nghề chính</h3><select id="f_main"><option value="">Tất cả ngành chính</option></select><h3>Ngành nghề chi tiết</h3>
       <select id="f_line"><option value="">Tất cả ngành</option></select>
       <h3>Trạng thái &amp; hạng</h3>
       <div class="row">
@@ -198,7 +198,7 @@ td .sub{color:var(--mute);font-size:12px}
         <table>
           <thead><tr>
             <th style="width:30px"><input type="checkbox" id="chkAll" style="width:auto"></th>
-            <th>Chủ hộ / Địa chỉ</th><th>MST</th><th>Khu vực</th><th>Ngành nghề</th>
+            <th>Chủ hộ / Địa chỉ</th><th>Mã Fieldman</th><th>MST</th><th>SĐT</th><th>Khu vực</th><th>Ngành chính</th><th>Ngành nghề</th><th>Tọa độ</th><th>Nguồn</th>
             <th class="num money">Doanh thu/tháng</th><th>Trạng thái</th>
           </tr></thead>
           <tbody id="rows"></tbody>
@@ -237,7 +237,7 @@ const STATUS = {lead:"Tiềm năng", active:"Đang hoạt động", inactive:"T�
 const KIND = {note:"Ghi chú", call:"Cuộc gọi", visit:"Viếng thăm", order:"Đơn hàng", audit:"Kiểm tra"};
 const PAGE = 50, SELALL_MAX = 20000;
 
-const S = {me:null, opts:{business_lines:[],provinces:[],regions:[]}, page:1, total:0, rows:[], sel:new Set(), selAll:false, cancel:false, cur:null};
+const S = {me:null, opts:{business_lines:[],main_industries:[],provinces:[],regions:[]}, page:1, total:0, rows:[], sel:new Set(), selAll:false, cancel:false, cur:null};
 const provName = {}, regName = {};
 const canMoney = () => S.me && ["admin","region_manager"].includes(S.me.role);
 
@@ -304,26 +304,27 @@ async function boot(){
   S.opts.provinces.forEach(p=>provName[p.id]=p.name); S.opts.regions.forEach(r=>regName[r.id]=r.name);
   fillSelect("f_region", S.opts.regions.map(r=>[r.id,r.name]));
   fillProvinces();
-  fillSelect("f_line", S.opts.business_lines.map(x=>[x,x]));
+  fillSelect("f_line", S.opts.business_lines.map(x=>[x,x])); fillSelect("f_main", (S.opts.main_industries||[]).map(x=>[x,x]));
   loadViews(); await load(); loadCards();
 }
 function fillSelect(id, pairs){ const el=$(id), first=el.options[0].outerHTML; el.innerHTML = first + pairs.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join(""); }
 function fillProvinces(){ const r=$("f_region").value; fillSelect("f_province", S.opts.provinces.filter(p=>!r||String(p.region_id)===r).map(p=>[p.id,p.name])); }
 
 /* ===== BỘ LỌC ===== */
-function filterState(){ return {q:$("f_q").value, region:$("f_region").value, province:$("f_province").value, ward:$("f_ward").value, line:$("f_line").value,
+function filterState(){ return {q:$("f_q").value, region:$("f_region").value, province:$("f_province").value, ward:$("f_ward").value, line:$("f_line").value, main:$("f_main").value,
   status:$("f_status").value, tier:$("f_tier").value, rmin:$("f_rmin").value, rmax:$("f_rmax").value, tag:$("f_tag").value,
   phone:$("f_phone").checked, hidednc:$("f_hidednc").checked, sort:$("f_sort").value}; }
 function setFilterState(f){ $("f_q").value=f.q||""; $("f_region").value=f.region||""; fillProvinces(); $("f_province").value=f.province||""; $("f_ward").value=f.ward||"";
-  $("f_line").value=f.line||""; $("f_status").value=f.status||""; $("f_tier").value=f.tier||""; $("f_rmin").value=f.rmin||""; $("f_rmax").value=f.rmax||"";
+  $("f_line").value=f.line||""; $("f_main").value=f.main||""; $("f_status").value=f.status||""; $("f_tier").value=f.tier||""; $("f_rmin").value=f.rmin||""; $("f_rmax").value=f.rmax||"";
   $("f_tag").value=f.tag||""; $("f_phone").checked=!!f.phone; $("f_hidednc").checked=!!f.hidednc; $("f_sort").value=f.sort||"rev_desc"; }
 function applyFilters(qb, f=filterState()){
   const q = f.q.trim().replace(/[,()*%]/g," ").trim();
-  if(q){ qb = /^[\d\s.\-]+$/.test(q) ? qb.or(`tax_code.ilike.${q.replace(/\s/g,"")}*,phone.ilike.${q.replace(/\s/g,"")}*`) : qb.or(`name.ilike.*${q}*,tax_code.ilike.${q}*`); }
+  if(q){ qb = /^[\d\s.\-]+$/.test(q) ? qb.or(`tax_code.ilike.${q.replace(/\s/g,"")}*,phone.ilike.${q.replace(/\s/g,"")}*`) : qb.or(`name.ilike.*${q}*,tax_code.ilike.${q}*,fieldman_code.ilike.${q}*`); }
   if(f.region) qb = qb.eq("region_id", f.region);
   if(f.province) qb = qb.eq("province_id", f.province);
   if(f.ward.trim()) qb = qb.ilike("ward", `%${f.ward.trim().replace(/[%_]/g,"")}%`);
   if(f.line) qb = qb.eq("business_line", f.line);
+if(f.main) qb = qb.eq("main_industry", f.main);
   if(f.status) qb = qb.eq("status", f.status);
   if(f.tier) qb = qb.eq("tier", f.tier);
   if(f.rmin!=="") qb = qb.gte("monthly_revenue", Number(f.rmin)*1e6);
@@ -334,7 +335,7 @@ function applyFilters(qb, f=filterState()){
   return qb;
 }
 function applySort(qb, s){ return s==="name_asc" ? qb.order("name",{ascending:true}).order("id") : qb.order("monthly_revenue",{ascending:s==="rev_asc",nullsFirst:false}).order("id"); }
-const LIST_COLS = "id,name,tax_code,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,phone,do_not_contact,tags";
+const LIST_COLS = "id,name,tax_code,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,phone,do_not_contact,tags,fieldman_code,main_industry,lat,lng,source";
 
 let loadSeq = 0;
 async function load(){
@@ -355,9 +356,10 @@ function render(){
   $("rows").innerHTML = S.rows.map(r=>`<tr data-id="${esc(r.id)}">
     <td><input type="checkbox" class="rc" style="width:auto" ${S.sel.has(r.id)||S.selAll?"checked":""}></td>
     <td><b>${esc(r.name)}</b> ${r.do_not_contact?'<span class="badge dnc">Không liên hệ</span>':""}<div class="sub">${esc([r.address,r.ward].filter(Boolean).join(", "))}</div>${(r.tags||[]).map(t=>`<span class="badge">${esc(t)}</span>`).join(" ")}</td>
-    <td>${esc(r.tax_code)}<div class="sub">${esc(r.phone)}</div></td>
+    <td style="white-space:nowrap">${esc(r.fieldman_code)}</td>
+<td>${esc(r.tax_code)}</td><td style="white-space:nowrap">${esc(r.phone)}</td>
     <td>${esc(provName[r.province_id]||"")}<div class="sub">${esc(regName[r.region_id]||"")}</div></td>
-    <td>${esc(r.business_line)}</td>
+    <td>${esc(r.main_industry)}</td><td>${esc(r.business_line)}</td><td class="sub" style="white-space:nowrap">${r.lat!=null&&r.lng!=null?esc(Number(r.lat).toFixed(5)+", "+Number(r.lng).toFixed(5)):""}</td><td>${esc(r.source)}</td>
     ${money?`<td class="num">${fmt(r.monthly_revenue)}<div class="sub">thuế ${fmt(r.monthly_tax)}</div></td>`:""}
     <td><span class="badge ${esc(r.status)}">${esc(STATUS[r.status]||r.status)}</span>${r.tier?` <span class="badge">Hạng ${esc(r.tier)}</span>`:""}</td></tr>`).join("");
   $("empty").classList.toggle("hidden", S.rows.length>0);
@@ -379,7 +381,7 @@ function renderBulk(){
 }
 function refilter(){ S.page=1; S.sel.clear(); S.selAll=false; load(); loadCards(); document.querySelectorAll(".stat").forEach(x=>x.classList.toggle("on", x.dataset.region===$("f_region").value && x.dataset.region!=="")); }
 let deb; ["f_q","f_ward","f_rmin","f_rmax","f_tag"].forEach(id=>$(id).addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(refilter,380);}));
-["f_province","f_line","f_status","f_tier","f_phone","f_hidednc","f_sort"].forEach(id=>$(id).addEventListener("change",refilter));
+["f_province","f_main","f_line","f_status","f_tier","f_phone","f_hidednc","f_sort"].forEach(id=>$(id).addEventListener("change",refilter));
 $("f_region").addEventListener("change",()=>{fillProvinces();refilter();});
 $("resetBtn").onclick = ()=>{ setFilterState({}); refilter(); };
 $("filtbtn").onclick = ()=>$("filters").classList.toggle("open");
@@ -439,7 +441,9 @@ async function openDrawer(id){
   <div class="db">
     <dl class="kv">
       <dt>Mã số thuế</dt><dd>${esc(s.tax_code)||"—"}</dd>
-      <dt>Ngành nghề</dt><dd>${esc(s.business_line)||"—"}</dd>
+      <dt>Mã Fieldman</dt><dd>${esc(s.fieldman_code)||"—"}</dd>
+<dt>Ngành nghề chính</dt><dd>${esc(s.main_industry)||"—"}</dd>
+<dt>Ngành nghề</dt><dd>${esc(s.business_line)||"—"}</dd>
       <dt>Khu vực</dt><dd>${esc(regName[s.region_id]||"")} · ${esc(provName[s.province_id]||"")} · ${esc(s.ward||"")}</dd>
       ${money?`<dt>Doanh thu khoán</dt><dd>${fmt(s.monthly_revenue)} đ/tháng</dd><dt>Thuế phải nộp</dt><dd>${fmt(s.monthly_tax)} đ/tháng</dd>`:""}
       <dt>Nguồn dữ liệu</dt><dd>${esc(s.source)||"—"} ${s.data_period?`(kỳ ${esc(s.data_period)})`:""}</dd>
@@ -450,6 +454,7 @@ async function openDrawer(id){
       <div><label>Hạng</label><select id="e_tier"><option value="">—</option>${["A","B","C"].map(t=>`<option ${s.tier===t?"selected":""}>${t}</option>`).join("")}</select></div>
       <div><label>Số điện thoại</label><input id="e_phone" value="${esc(s.phone)}"></div>
       <div><label>Email</label><input id="e_email" value="${esc(s.email)}"></div>
+<div><label>Vĩ độ (lat)</label><input id="e_lat" type="number" step="any" value="${esc(s.lat)}"></div><div><label>Kinh độ (lng)</label><input id="e_lng" type="number" step="any" value="${esc(s.lng)}"></div>
       <div class="full"><label>Nhãn (cách nhau bằng dấu phẩy)</label><input id="e_tags" value="${esc((s.tags||[]).join(", "))}"></div>
       <div class="full"><label>Ghi chú</label><textarea id="e_notes" rows="3">${esc(s.notes)}</textarea></div>
       <label class="chk full" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="e_dnc" style="width:auto" ${s.do_not_contact?"checked":""}> Không liên hệ (khách yêu cầu từ chối / không được chào bán)</label>
@@ -473,7 +478,8 @@ function closeDrawer(){ $("drawer").classList.add("hidden"); $("veil").classList
 $("veil").onclick = closeDrawer; document.addEventListener("keydown",e=>{ if(e.key==="Escape" && S.cur) closeDrawer(); });
 async function saveStore(){
   const patch = { status:$("e_status").value, tier:$("e_tier").value||null, phone:$("e_phone").value.trim()||null, email:$("e_email").value.trim()||null,
-    tags:$("e_tags").value.split(",").map(x=>x.trim()).filter(Boolean), notes:$("e_notes").value.trim()||null, do_not_contact:$("e_dnc").checked };
+    tags:$("e_tags").value.split(",").map(x=>x.trim()).filter(Boolean), notes:$("e_notes").value.trim()||null, do_not_contact:$("e_dnc").checked,
+lat:$("e_lat").value===""?null:Number($("e_lat").value), lng:$("e_lng").value===""?null:Number($("e_lng").value) };
   $("saveBtn").disabled = true;
   const {data,error} = await sb.from("stores").update(patch).eq("id",S.cur.id).select(LIST_COLS).single();
   $("saveBtn").disabled = false;
@@ -493,10 +499,10 @@ async function addActivity(){
 }
 
 /* ===== XUẤT CSV ===== */
-const CSV_COLS = [["Chủ hộ","name"],["Mã số thuế","tax_code"],["Điện thoại","phone"],["Email","email"],["Địa chỉ","address"],["Phường/xã","ward"],
-  ["Tỉnh/thành","_prov"],["Vùng","_reg"],["Ngành nghề","business_line"],["Doanh thu khoán/tháng","monthly_revenue"],["Thuế/tháng","monthly_tax"],
-  ["Trạng thái","_status"],["Hạng","tier"],["Nhãn","_tags"],["Không liên hệ","_dnc"],["Ghi chú","notes"],["Nguồn","source"],["Kỳ dữ liệu","data_period"]];
-const EXP_SEL = "id,name,tax_code,phone,email,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,tags,do_not_contact,notes,source,data_period";
+const CSV_COLS = [["Mã Fieldman","fieldman_code"],["Chủ hộ","name"],["Mã số thuế","tax_code"],["Điện thoại","phone"],["Email","email"],["Địa chỉ","address"],["Phường/xã","ward"],
+  ["Tỉnh/thành","_prov"],["Vùng","_reg"],["Ngành nghề chính","main_industry"],["Ngành nghề","business_line"],["Doanh thu khoán/tháng","monthly_revenue"],["Thuế/tháng","monthly_tax"],
+  ["Trạng thái","_status"],["Hạng","tier"],["Nhãn","_tags"],["Không liên hệ","_dnc"],["Ghi chú","notes"],["Nguồn","source"],["Kỳ dữ liệu","data_period"],["Vĩ độ","lat"],["Kinh độ","lng"]];
+const EXP_SEL = "id,name,tax_code,phone,email,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,tags,do_not_contact,notes,source,data_period,fieldman_code,main_industry,lat,lng";
 function csvCell(v){ v = v==null ? "" : String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
 function csvRow(r){ return CSV_COLS.filter(([h])=>canMoney()||!/Doanh thu|Thuế/.test(h)).map(([,k])=>csvCell(
   k==="_prov"?provName[r.province_id]:k==="_reg"?regName[r.region_id]:k==="_status"?STATUS[r.status]:k==="_tags"?(r.tags||[]).join("; "):k==="_dnc"?(r.do_not_contact?"Có":""):r[k])).join(","); }
