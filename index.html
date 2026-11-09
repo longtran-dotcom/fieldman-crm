@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Fieldman CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2230;--mute:#6b7488;--line:#e3e6ec;--brand:#0f7a5a;--brand-ink:#fff;--soft:#e8f5f0;--warn:#b45309;--bad:#b42318;--hover:#f0f3f7}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1a1f28;--ink:#e8ebf1;--mute:#98a2b6;--line:#2b3240;--brand:#2fb68a;--brand-ink:#06251b;--soft:#16302a;--warn:#f5a524;--bad:#ff7a70;--hover:#232a36}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px}
+button:hover{background:var(--hover)}
+button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+button.primary:hover{filter:brightness(1.05)}
+button.ghost{border-color:transparent;background:transparent}
+button:disabled{opacity:.5;cursor:not-allowed}
+.hidden{display:none!important}
+/* login */
+#login{min-height:100%;display:grid;place-items:center;padding:16px}
+.login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:380px}
+.login-card h1{margin:0 0 4px;font-size:20px}
+.login-card p{margin:0 0 18px;color:var(--mute)}
+.login-card label{display:block;margin:10px 0 4px;color:var(--mute);font-size:12px}
+.err{color:var(--bad);margin-top:10px;min-height:18px}
+/* app */
+#app{display:grid;grid-template-rows:auto 1fr;height:100%}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0}
+header .sp{flex:1}
+header .who{color:var(--mute);font-size:12px;text-align:right}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:0}
+aside{background:var(--card);border-right:1px solid var(--line);padding:14px;overflow:auto}
+aside h3{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+aside h3:first-child{margin-top:0}
+aside .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+aside label.chk{display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--ink)}
+aside label.chk input{width:auto}
+main{display:flex;flex-direction:column;min-width:0;min-height:0;padding:14px;gap:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.stat:hover{background:var(--hover)}
+.stat.on{border-color:var(--brand);background:var(--soft)}
+.stat b{display:block;font-size:20px}
+.stat span{color:var(--mute);font-size:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .search{flex:1;min-width:200px}
+.toolbar select{width:auto}
+.bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--soft);border:1px solid var(--brand);border-radius:10px;padding:8px 12px}
+.tablewrap{flex:1;min-height:0;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;z-index:1}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--hover)}
+td.num,th.num{text-align:right;white-space:nowrap}
+td .sub{color:var(--mute);font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:var(--hover);border:1px solid var(--line);white-space:nowrap}
+.badge.lead{background:#e8f0fe;border-color:#c5d8fb;color:#1a4fb4}
+.badge.active{background:var(--soft);border-color:var(--brand);color:var(--brand)}
+.badge.inactive{background:#fff4e0;border-color:#f3d79f;color:var(--warn)}
+.badge.closed{background:#fde8e6;border-color:#f6c2bd;color:var(--bad)}
+.badge.dnc{background:#fde8e6;border-color:#f6c2bd;color:var(--bad)}
+@media (prefers-color-scheme:dark){.badge.lead{background:#18284a;border-color:#2b4a85;color:#8db4ff}.badge.inactive{background:#3a2c10;border-color:#6b5320}.badge.closed,.badge.dnc{background:#3a1714;border-color:#6d2a25}}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;color:var(--mute)}
+.pager .pg{display:flex;gap:6px;align-items:center}
+.pager input{width:70px;text-align:center}
+.empty{padding:40px;text-align:center;color:var(--mute)}
+/* drawer */
+#veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--card);border-left:1px solid var(--line);z-index:21;display:flex;flex-direction:column}
+#drawer .dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+#drawer .dh h2{margin:0;font-size:17px}
+#drawer .db{flex:1;overflow:auto;padding:14px 16px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:6px 10px;margin-bottom:14px}
+.kv dt{color:var(--mute)}
+.kv dd{margin:0;word-break:break-word}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px}
+.form .full{grid-column:1/-1}
+.form label{display:block;color:var(--mute);font-size:12px;margin-bottom:3px}
+.sect{margin:18px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+.act{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px}
+.act .meta{color:var(--mute);font-size:12px;margin-bottom:3px}
+.act .txt{white-space:pre-wrap;word-break:break-word}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;z-index:40;max-width:90%}
+#prog{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30}
+#prog .box{background:var(--card);border-radius:12px;padding:20px;width:min(380px,92%)}
+.bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:12px 0}
+.bar i{display:block;height:100%;background:var(--brand);width:0}
+#filtbtn{display:none}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 20% 0 0;z-index:15;transform:translateX(-105%);transition:transform .2s;box-shadow:2px 0 12px rgba(0,0,0,.2)}
+  aside.open{transform:none}
+  #filtbtn{display:inline-block}
+}
+</style>
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <form class="login-card" id="loginForm">
+    <h1>Fieldman CRM</h1>
+    <p>Đăng nhập để quản lý danh sách cửa hàng.</p>
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" required>
+    <label for="pw">Mật khẩu</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <div class="err" id="loginErr"></div>
+    <button class="primary" style="width:100%;margin-top:6px" id="loginBtn">Đăng nhập</button>
+  </form>
+</section>
+
+<section id="app" class="hidden">
+  <header>
+    <button id="filtbtn">Bộ lọc</button>
+    <h1>Fieldman CRM</h1>
+    <div class="sp"></div>
+    <div class="who"><div id="whoEmail"></div><div id="whoRole"></div></div>
+    <button id="logoutBtn">Đăng xuất</button>
+  </header>
+  <div class="layout">
+    <aside id="filters">
+      <h3>Tìm kiếm</h3>
+      <input id="f_q" placeholder="Tên chủ hộ, MST, số điện thoại">
+      <h3>Khu vực</h3>
+      <select id="f_region"><option value="">Tất cả vùng</option></select>
+      <div style="height:8px"></div>
+      <select id="f_province"><option value="">Tất cả tỉnh/thành</option></select>
+      <div style="height:8px"></div>
+      <input id="f_ward" placeholder="Phường/xã (gõ một phần tên)">
+      <h3>Ngành nghề</h3>
+      <select id="f_line"><option value="">Tất cả ngành</option></select>
+      <h3>Trạng thái &amp; hạng</h3>
+      <div class="row">
+        <select id="f_status"><option value="">Trạng thái</option>
+          <option value="lead">Tiềm năng</option><option value="active">Đang hoạt động</option>
+          <option value="inactive">Tạm ngưng</option><option value="closed">Đã đóng</option></select>
+        <select id="f_tier"><option value="">Hạng</option><option>A</option><option>B</option><option>C</option></select>
+      </div>
+      <h3>Doanh thu khoán/tháng (triệu đ)</h3>
+      <div class="row"><input id="f_rmin" type="number" min="0" placeholder="Từ"><input id="f_rmax" type="number" min="0" placeholder="Đến"></div>
+      <h3>Khác</h3>
+      <input id="f_tag" placeholder="Nhãn (tag)">
+      <label class="chk"><input type="checkbox" id="f_phone"> Chỉ cửa hàng có SĐT</label>
+      <label class="chk"><input type="checkbox" id="f_hidednc"> Ẩn "không liên hệ"</label>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button id="resetBtn" style="flex:1">Xóa lọc</button>
+        <button id="saveViewBtn" style="flex:1">Lưu bộ lọc</button>
+      </div>
+      <h3>Bộ lọc đã lưu</h3>
+      <select id="viewSel"><option value="">— chọn —</option></select>
+      <button id="delViewBtn" class="ghost" style="color:var(--bad);padding:4px 0">Xóa bộ lọc đã chọn</button>
+    </aside>
+    <main>
+      <div class="cards" id="cards"></div>
+      <div class="toolbar">
+        <div class="search" id="resultInfo" style="font-weight:600"></div>
+        <select id="f_sort">
+          <option value="rev_desc">Doanh thu giảm dần</option>
+          <option value="rev_asc">Doanh thu tăng dần</option>
+          <option value="name_asc">Tên A → Z</option>
+        </select>
+        <button id="exportBtn" class="primary">Tải CSV</button>
+      </div>
+      <div class="bulk hidden" id="bulk">
+        <b id="bulkCount"></b>
+        <button id="selAllBtn" class="ghost hidden"></button>
+        <span style="flex:1"></span>
+        <select id="bulkStatus" style="width:auto"><option value="">Đặt trạng thái…</option>
+          <option value="lead">Tiềm năng</option><option value="active">Đang hoạt động</option>
+          <option value="inactive">Tạm ngưng</option><option value="closed">Đã đóng</option></select>
+        <select id="bulkTier" style="width:auto"><option value="">Đặt hạng…</option><option>A</option><option>B</option><option>C</option></select>
+        <button id="bulkDnc">Đánh dấu không liên hệ</button>
+        <button id="bulkExport">Tải CSV phần đã chọn</button>
+        <button id="bulkClear" class="ghost">Bỏ chọn</button>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th style="width:30px"><input type="checkbox" id="chkAll" style="width:auto"></th>
+            <th>Chủ hộ / Địa chỉ</th><th>MST</th><th>Khu vực</th><th>Ngành nghề</th>
+            <th class="num money">Doanh thu/tháng</th><th>Trạng thái</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty hidden" id="empty">Không có kết quả phù hợp.</div>
+      </div>
+      <div class="pager">
+        <div id="pageInfo"></div>
+        <div class="pg">
+          <button id="firstBtn">«</button><button id="prevBtn">‹</button>
+          <input id="pageInp" type="number" min="1">
+          <button id="nextBtn">›</button><button id="lastBtn">»</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<div id="veil" class="hidden"></div>
+<aside id="drawer" class="hidden" style="position:fixed"></aside>
+<div id="prog" class="hidden"><div class="box"><b id="progTitle">Đang xuất dữ liệu…</b><div class="bar"><i id="progBar"></i></div><div id="progTxt" style="color:var(--mute)"></div><div style="text-align:right;margin-top:10px"><button id="progCancel">Hủy</button></div></div></div>
+<div id="toast" class="hidden"></div>
+
+<script>
+/* ===== CẤU HÌNH ===== */
+const SUPABASE_URL = "https://nuxwqqrvzlhnwpldghtt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KN7gFx1syi1lAftFP39iGQ_tmr150V2";   // khóa publishable/anon: công khai theo thiết kế, dữ liệu được bảo vệ bởi RLS
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => n == null ? "" : Number(n).toLocaleString("vi-VN");
+const STATUS = {lead:"Tiềm năng", active:"Đang hoạt động", inactive:"Tạm ngưng", closed:"Đã đóng"};
+const KIND = {note:"Ghi chú", call:"Cuộc gọi", visit:"Viếng thăm", order:"Đơn hàng", audit:"Kiểm tra"};
+const PAGE = 50, SELALL_MAX = 20000;
+
+const S = {me:null, opts:{business_lines:[],provinces:[],regions:[]}, page:1, total:0, rows:[], sel:new Set(), selAll:false, cancel:false, cur:null};
+const provName = {}, regName = {};
+const canMoney = () => S.me && ["admin","region_manager"].includes(S.me.role);
+
+function toast(msg, ms=2800){ const t=$("toast"); t.textContent=msg; t.classList.remove("hidden"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.add("hidden"),ms); }
+function viewMode(m){ $("login").classList.toggle("hidden", m!=="login"); $("app").classList.toggle("hidden", m!=="app"); }
+
+/* ===== ĐĂNG NHẬP ===== */
+$("loginForm").addEventListener("submit", async e=>{
+  e.preventDefault(); $("loginErr").textContent=""; $("loginBtn").disabled=true;
+  const {error} = await sb.auth.signInWithPassword({email:$("em").value.trim(), password:$("pw").value});
+  $("loginBtn").disabled=false;
+  if(error){ $("loginErr").textContent = "Sai email hoặc mật khẩu."; return; }
+  boot();
+});
+$("logoutBtn").onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
+
+async function boot(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ viewMode("login"); return; }
+  const email = session.user.email;
+  const {data:me, error} = await sb.from("staff").select("id,full_name,email,role,region_id").ilike("email", email).maybeSingle();
+  if(error || !me){
+    viewMode("login");
+    $("loginErr").textContent = "Tài khoản " + email + " chưa được cấp quyền truy cập CRM. Liên hệ quản trị viên.";
+    await sb.auth.signOut(); return;
+  }
+  S.me = me;
+  $("whoEmail").textContent = me.full_name || email;
+  $("whoRole").textContent = {admin:"Quản trị",region_manager:"Quản lý vùng",sales:"Sales",telesales:"Telesales",viewer:"Chỉ xem"}[me.role] || me.role;
+  if(!canMoney()) document.querySelectorAll(".money").forEach(x=>x.classList.add("hidden"));
+  viewMode("app");
+  const {data:o} = await sb.rpc("crm_filter_options");
+  if(o){ S.opts = o; }
+  S.opts.provinces.forEach(p=>provName[p.id]=p.name); S.opts.regions.forEach(r=>regName[r.id]=r.name);
+  fillSelect("f_region", S.opts.regions.map(r=>[r.id,r.name]));
+  fillProvinces();
+  fillSelect("f_line", S.opts.business_lines.map(x=>[x,x]));
+  loadViews(); await load(); loadCards();
+}
+function fillSelect(id, pairs){ const el=$(id), first=el.options[0].outerHTML; el.innerHTML = first + pairs.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join(""); }
+function fillProvinces(){ const r=$("f_region").value; fillSelect("f_province", S.opts.provinces.filter(p=>!r||String(p.region_id)===r).map(p=>[p.id,p.name])); }
+
+/* ===== BỘ LỌC ===== */
+function filterState(){ return {q:$("f_q").value, region:$("f_region").value, province:$("f_province").value, ward:$("f_ward").value, line:$("f_line").value,
+  status:$("f_status").value, tier:$("f_tier").value, rmin:$("f_rmin").value, rmax:$("f_rmax").value, tag:$("f_tag").value,
+  phone:$("f_phone").checked, hidednc:$("f_hidednc").checked, sort:$("f_sort").value}; }
+function setFilterState(f){ $("f_q").value=f.q||""; $("f_region").value=f.region||""; fillProvinces(); $("f_province").value=f.province||""; $("f_ward").value=f.ward||"";
+  $("f_line").value=f.line||""; $("f_status").value=f.status||""; $("f_tier").value=f.tier||""; $("f_rmin").value=f.rmin||""; $("f_rmax").value=f.rmax||"";
+  $("f_tag").value=f.tag||""; $("f_phone").checked=!!f.phone; $("f_hidednc").checked=!!f.hidednc; $("f_sort").value=f.sort||"rev_desc"; }
+function applyFilters(qb, f=filterState()){
+  const q = f.q.trim().replace(/[,()*%]/g," ").trim();
+  if(q){ qb = /^[\d\s.\-]+$/.test(q) ? qb.or(`tax_code.ilike.${q.replace(/\s/g,"")}*,phone.ilike.${q.replace(/\s/g,"")}*`) : qb.or(`name.ilike.*${q}*,tax_code.ilike.${q}*`); }
+  if(f.region) qb = qb.eq("region_id", f.region);
+  if(f.province) qb = qb.eq("province_id", f.province);
+  if(f.ward.trim()) qb = qb.ilike("ward", `%${f.ward.trim().replace(/[%_]/g,"")}%`);
+  if(f.line) qb = qb.eq("business_line", f.line);
+  if(f.status) qb = qb.eq("status", f.status);
+  if(f.tier) qb = qb.eq("tier", f.tier);
+  if(f.rmin!=="") qb = qb.gte("monthly_revenue", Number(f.rmin)*1e6);
+  if(f.rmax!=="") qb = qb.lte("monthly_revenue", Number(f.rmax)*1e6);
+  if(f.tag.trim()) qb = qb.contains("tags", [f.tag.trim()]);
+  if(f.phone) qb = qb.not("phone","is",null).neq("phone","");
+  if(f.hidednc) qb = qb.eq("do_not_contact", false);
+  return qb;
+}
+function applySort(qb, s){ return s==="name_asc" ? qb.order("name",{ascending:true}).order("id") : qb.order("monthly_revenue",{ascending:s==="rev_asc",nullsFirst:false}).order("id"); }
+const LIST_COLS = "id,name,tax_code,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,phone,do_not_contact,tags";
+
+let loadSeq = 0;
+async function load(){
+  const seq = ++loadSeq, f = filterState();
+  $("resultInfo").textContent = "Đang tải…";
+  let qb = applySort(applyFilters(sb.from("stores").select(LIST_COLS,{count:"exact"}), f), f.sort).range((S.page-1)*PAGE, S.page*PAGE-1);
+  let {data, error, count} = await qb;
+  if(error && /timeout|57014/i.test(error.message+error.code)){   // đếm chính xác quá chậm → ước lượng
+    ({data, error, count} = await applySort(applyFilters(sb.from("stores").select(LIST_COLS,{count:"planned"}), f), f.sort).range((S.page-1)*PAGE, S.page*PAGE-1));
+  }
+  if(seq !== loadSeq) return;
+  if(error){ $("resultInfo").textContent = "Lỗi: " + error.message; return; }
+  S.rows = data || []; S.total = count ?? 0; render();
+}
+function pages(){ return Math.max(1, Math.ceil(S.total/PAGE)); }
+function render(){
+  const money = canMoney();
+  $("rows").innerHTML = S.rows.map(r=>`<tr data-id="${esc(r.id)}">
+    <td><input type="checkbox" class="rc" style="width:auto" ${S.sel.has(r.id)||S.selAll?"checked":""}></td>
+    <td><b>${esc(r.name)}</b> ${r.do_not_contact?'<span class="badge dnc">Không liên hệ</span>':""}<div class="sub">${esc([r.address,r.ward].filter(Boolean).join(", "))}</div>${(r.tags||[]).map(t=>`<span class="badge">${esc(t)}</span>`).join(" ")}</td>
+    <td>${esc(r.tax_code)}<div class="sub">${esc(r.phone)}</div></td>
+    <td>${esc(provName[r.province_id]||"")}<div class="sub">${esc(regName[r.region_id]||"")}</div></td>
+    <td>${esc(r.business_line)}</td>
+    ${money?`<td class="num">${fmt(r.monthly_revenue)}<div class="sub">thuế ${fmt(r.monthly_tax)}</div></td>`:""}
+    <td><span class="badge ${esc(r.status)}">${esc(STATUS[r.status]||r.status)}</span>${r.tier?` <span class="badge">Hạng ${esc(r.tier)}</span>`:""}</td></tr>`).join("");
+  $("empty").classList.toggle("hidden", S.rows.length>0);
+  const from = S.total? (S.page-1)*PAGE+1 : 0, to = Math.min(S.total, S.page*PAGE);
+  $("resultInfo").textContent = `${fmt(S.total)} cửa hàng`;
+  $("pageInfo").textContent = `Hiển thị ${fmt(from)}–${fmt(to)}`;
+  $("pageInp").value = S.page; $("pageInp").max = pages();
+  $("firstBtn").disabled = $("prevBtn").disabled = S.page<=1; $("nextBtn").disabled = $("lastBtn").disabled = S.page>=pages();
+  $("chkAll").checked = S.rows.length>0 && S.rows.every(r=>S.sel.has(r.id)) || S.selAll;
+  renderBulk();
+}
+function renderBulk(){
+  const n = S.selAll ? S.total : S.sel.size;
+  $("bulk").classList.toggle("hidden", n===0);
+  $("bulkCount").textContent = `Đã chọn ${fmt(n)}`;
+  const b = $("selAllBtn");
+  const showAll = !S.selAll && S.sel.size>0 && S.total>S.rows.length && S.total<=SELALL_MAX;
+  b.classList.toggle("hidden", !showAll); b.textContent = `Chọn cả ${fmt(S.total)} kết quả đang lọc`;
+}
+function refilter(){ S.page=1; S.sel.clear(); S.selAll=false; load(); loadCards(); document.querySelectorAll(".stat").forEach(x=>x.classList.toggle("on", x.dataset.region===$("f_region").value && x.dataset.region!=="")); }
+let deb; ["f_q","f_ward","f_rmin","f_rmax","f_tag"].forEach(id=>$(id).addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(refilter,380);}));
+["f_province","f_line","f_status","f_tier","f_phone","f_hidednc","f_sort"].forEach(id=>$(id).addEventListener("change",refilter));
+$("f_region").addEventListener("change",()=>{fillProvinces();refilter();});
+$("resetBtn").onclick = ()=>{ setFilterState({}); refilter(); };
+$("filtbtn").onclick = ()=>$("filters").classList.toggle("open");
+
+/* thẻ thống kê theo vùng */
+let cardSeq=0;
+async function loadCards(){
+  const seq=++cardSeq, f=filterState(); f.region="";
+  const regs = S.opts.regions;
+  const counts = await Promise.all(regs.map(r=>applyFilters(sb.from("stores").select("id",{count:"exact",head:true}).eq("region_id",r.id), f).then(x=>x.count??0)));
+  if(seq!==cardSeq) return;
+  const tot = counts.reduce((a,b)=>a+b,0), cur=$("f_region").value;
+  $("cards").innerHTML = `<div class="stat ${cur===""?"on":""}" data-region=""><b>${fmt(tot)}</b><span>Tất cả vùng</span></div>` +
+    regs.map((r,i)=>`<div class="stat ${String(r.id)===cur?"on":""}" data-region="${r.id}"><b>${fmt(counts[i])}</b><span>${esc(r.name)}</span></div>`).join("");
+  document.querySelectorAll(".stat").forEach(el=>el.onclick=()=>{ $("f_region").value=el.dataset.region; fillProvinces(); refilter(); });
+}
+
+/* phân trang */
+$("firstBtn").onclick=()=>{S.page=1;load()}; $("prevBtn").onclick=()=>{S.page--;load()};
+$("nextBtn").onclick=()=>{S.page++;load()}; $("lastBtn").onclick=()=>{S.page=pages();load()};
+$("pageInp").addEventListener("change",e=>{S.page=Math.min(pages(),Math.max(1,parseInt(e.target.value)||1));load()});
+
+/* chọn nhiều + thao tác hàng loạt */
+$("rows").addEventListener("click",e=>{
+  const tr = e.target.closest("tr"); if(!tr) return;
+  const id = tr.dataset.id;
+  if(e.target.classList.contains("rc")){ if(e.target.checked) S.sel.add(id); else { S.sel.delete(id); S.selAll=false; } renderBulk(); $("chkAll").checked=S.rows.every(r=>S.sel.has(r.id)); return; }
+  openDrawer(id);
+});
+$("chkAll").onchange = e=>{ if(e.target.checked) S.rows.forEach(r=>S.sel.add(r.id)); else { S.sel.clear(); S.selAll=false; } render(); };
+$("selAllBtn").onclick = ()=>{ S.selAll=true; render(); };
+$("bulkClear").onclick = ()=>{ S.sel.clear(); S.selAll=false; render(); };
+async function bulkApply(patch, label){
+  const n = S.selAll ? S.total : S.sel.size;
+  if(!confirm(`${label} cho ${fmt(n)} cửa hàng?`)) return;
+  let qb = sb.from("stores").update(patch,{count:"exact"});
+  qb = S.selAll ? applyFilters(qb) : qb.in("id",[...S.sel]);
+  const {error,count} = await qb;
+  if(error){ toast("Lỗi: "+error.message, 5000); return; }
+  toast(`Đã cập nhật ${fmt(count)} cửa hàng`); S.sel.clear(); S.selAll=false; load(); loadCards();
+}
+$("bulkStatus").onchange = e=>{ const v=e.target.value; e.target.value=""; if(v) bulkApply({status:v}, `Đặt trạng thái "${STATUS[v]}"`); };
+$("bulkTier").onchange = e=>{ const v=e.target.value; e.target.value=""; if(v) bulkApply({tier:v}, `Đặt hạng ${v}`); };
+$("bulkDnc").onclick = ()=>bulkApply({do_not_contact:true}, "Đánh dấu không liên hệ");
+
+/* ===== CHI TIẾT + BÌNH LUẬN / TƯƠNG TÁC ===== */
+async function openDrawer(id){
+  $("veil").classList.remove("hidden"); const d=$("drawer"); d.classList.remove("hidden"); d.innerHTML = '<div class="empty">Đang tải…</div>';
+  const [{data:s,error}, {data:acts}] = await Promise.all([
+    sb.from("stores").select("*").eq("id",id).single(),
+    sb.from("store_activities").select("id,kind,content,created_at,staff:staff_id(full_name)").eq("store_id",id).order("created_at",{ascending:false}).limit(100)
+  ]);
+  if(error){ d.innerHTML = `<div class="empty">Lỗi: ${esc(error.message)}</div>`; return; }
+  S.cur = s; const money = canMoney();
+  d.innerHTML = `
+  <div class="dh"><div style="flex:1"><h2>${esc(s.name)}</h2><div class="sub" style="color:var(--mute)">${esc([s.address,s.ward,provName[s.province_id]].filter(Boolean).join(", "))}</div></div><button id="dClose" class="ghost">✕</button></div>
+  <div class="db">
+    <dl class="kv">
+      <dt>Mã số thuế</dt><dd>${esc(s.tax_code)||"—"}</dd>
+      <dt>Ngành nghề</dt><dd>${esc(s.business_line)||"—"}</dd>
+      <dt>Khu vực</dt><dd>${esc(regName[s.region_id]||"")} · ${esc(provName[s.province_id]||"")} · ${esc(s.ward||"")}</dd>
+      ${money?`<dt>Doanh thu khoán</dt><dd>${fmt(s.monthly_revenue)} đ/tháng</dd><dt>Thuế phải nộp</dt><dd>${fmt(s.monthly_tax)} đ/tháng</dd>`:""}
+      <dt>Nguồn dữ liệu</dt><dd>${esc(s.source)||"—"} ${s.data_period?`(kỳ ${esc(s.data_period)})`:""}</dd>
+    </dl>
+    <div class="sect">Thông tin chăm sóc</div>
+    <div class="form">
+      <div><label>Trạng thái</label><select id="e_status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${s.status===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div><label>Hạng</label><select id="e_tier"><option value="">—</option>${["A","B","C"].map(t=>`<option ${s.tier===t?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div><label>Số điện thoại</label><input id="e_phone" value="${esc(s.phone)}"></div>
+      <div><label>Email</label><input id="e_email" value="${esc(s.email)}"></div>
+      <div class="full"><label>Nhãn (cách nhau bằng dấu phẩy)</label><input id="e_tags" value="${esc((s.tags||[]).join(", "))}"></div>
+      <div class="full"><label>Ghi chú</label><textarea id="e_notes" rows="3">${esc(s.notes)}</textarea></div>
+      <label class="chk full" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="e_dnc" style="width:auto" ${s.do_not_contact?"checked":""}> Không liên hệ (khách yêu cầu từ chối / không được chào bán)</label>
+      <div class="full"><button class="primary" id="saveBtn">Lưu thay đổi</button></div>
+    </div>
+    <div class="sect">Thêm tương tác / bình luận</div>
+    <div class="form">
+      <div><label>Loại</label><select id="a_kind">${["note","call","visit","order"].map(k=>`<option value="${k}">${KIND[k]}</option>`).join("")}</select></div>
+      <div></div>
+      <div class="full"><textarea id="a_text" rows="3" placeholder="Nội dung trao đổi, kết quả cuộc gọi, hẹn lần sau…"></textarea></div>
+      <div class="full"><button id="addAct">Thêm</button></div>
+    </div>
+    <div class="sect">Lịch sử (${(acts||[]).length})</div>
+    <div id="actList">${actsHtml(acts||[])}</div>
+  </div>`;
+  $("dClose").onclick = closeDrawer;
+  $("saveBtn").onclick = saveStore; $("addAct").onclick = addActivity;
+}
+function actsHtml(a){ return a.length ? a.map(x=>`<div class="act"><div class="meta"><b>${esc(KIND[x.kind]||x.kind)}</b> · ${esc(x.staff?.full_name||"—")} · ${new Date(x.created_at).toLocaleString("vi-VN")}</div><div class="txt">${esc(x.content)}</div></div>`).join("") : '<div style="color:var(--mute)">Chưa có tương tác nào.</div>'; }
+function closeDrawer(){ $("drawer").classList.add("hidden"); $("veil").classList.add("hidden"); S.cur=null; }
+$("veil").onclick = closeDrawer; document.addEventListener("keydown",e=>{ if(e.key==="Escape" && S.cur) closeDrawer(); });
+async function saveStore(){
+  const patch = { status:$("e_status").value, tier:$("e_tier").value||null, phone:$("e_phone").value.trim()||null, email:$("e_email").value.trim()||null,
+    tags:$("e_tags").value.split(",").map(x=>x.trim()).filter(Boolean), notes:$("e_notes").value.trim()||null, do_not_contact:$("e_dnc").checked };
+  $("saveBtn").disabled = true;
+  const {data,error} = await sb.from("stores").update(patch).eq("id",S.cur.id).select(LIST_COLS).single();
+  $("saveBtn").disabled = false;
+  if(error){ toast("Không lưu được: "+error.message, 5000); return; }
+  toast("Đã lưu"); const i=S.rows.findIndex(r=>r.id===data.id); if(i>=0){ S.rows[i]=data; render(); }
+}
+async function addActivity(){
+  const content = $("a_text").value.trim(); if(!content){ toast("Nhập nội dung trước"); return; }
+  const kind = $("a_kind").value; $("addAct").disabled = true;
+  const {error} = await sb.from("store_activities").insert({store_id:S.cur.id, staff_id:S.me.id, kind, content});
+  $("addAct").disabled = false;
+  if(error){ toast("Không thêm được: "+error.message, 5000); return; }
+  if(kind==="call"||kind==="visit") await sb.from("stores").update({last_visit_at:new Date().toISOString()}).eq("id",S.cur.id);
+  $("a_text").value=""; toast("Đã thêm");
+  const {data:acts} = await sb.from("store_activities").select("id,kind,content,created_at,staff:staff_id(full_name)").eq("store_id",S.cur.id).order("created_at",{ascending:false}).limit(100);
+  $("actList").innerHTML = actsHtml(acts||[]);
+}
+
+/* ===== XUẤT CSV ===== */
+const CSV_COLS = [["Chủ hộ","name"],["Mã số thuế","tax_code"],["Điện thoại","phone"],["Email","email"],["Địa chỉ","address"],["Phường/xã","ward"],
+  ["Tỉnh/thành","_prov"],["Vùng","_reg"],["Ngành nghề","business_line"],["Doanh thu khoán/tháng","monthly_revenue"],["Thuế/tháng","monthly_tax"],
+  ["Trạng thái","_status"],["Hạng","tier"],["Nhãn","_tags"],["Không liên hệ","_dnc"],["Ghi chú","notes"],["Nguồn","source"],["Kỳ dữ liệu","data_period"]];
+const EXP_SEL = "id,name,tax_code,phone,email,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,tags,do_not_contact,notes,source,data_period";
+function csvCell(v){ v = v==null ? "" : String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function csvRow(r){ return CSV_COLS.filter(([h])=>canMoney()||!/Doanh thu|Thuế/.test(h)).map(([,k])=>csvCell(
+  k==="_prov"?provName[r.province_id]:k==="_reg"?regName[r.region_id]:k==="_status"?STATUS[r.status]:k==="_tags"?(r.tags||[]).join("; "):k==="_dnc"?(r.do_not_contact?"Có":""):r[k])).join(","); }
+async function exportCsv(ids){
+  const f = filterState(); const total = ids ? ids.length : S.total;
+  if(!total){ toast("Không có dữ liệu để xuất"); return; }
+  if(total>200000 && !confirm(`Sẽ xuất ${fmt(total)} dòng, mất vài phút. Tiếp tục?`)) return;
+  S.cancel=false; $("prog").classList.remove("hidden"); $("progBar").style.width="0";
+  const head = CSV_COLS.filter(([h])=>canMoney()||!/Doanh thu|Thuế/.test(h)).map(([h])=>csvCell(h)).join(",");
+  const parts = ["﻿"+head+"\n"]; let last=null, got=0;
+  try{
+    if(ids){
+      for(let i=0;i<ids.length;i+=200){ if(S.cancel) throw 0;
+        const {data,error} = await sb.from("stores").select(EXP_SEL).in("id",ids.slice(i,i+200)); if(error) throw error;
+        parts.push(data.map(csvRow).join("\n")+"\n"); got+=data.length; prog(got,total); }
+    } else {
+      while(true){ if(S.cancel) throw 0;
+        let qb = applyFilters(sb.from("stores").select(EXP_SEL), f).order("id").limit(1000); if(last) qb = qb.gt("id",last);
+        const {data,error} = await qb; if(error) throw error; if(!data.length) break;
+        parts.push(data.map(csvRow).join("\n")+"\n"); got+=data.length; last=data[data.length-1].id; prog(got,total); if(data.length<1000) break; }
+    }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(parts,{type:"text/csv;charset=utf-8"}));
+    a.download=`cua-hang_${new Date().toISOString().slice(0,10)}_${got}-dong.csv`; document.body.appendChild(a); a.click(); a.remove();
+    toast(`Đã xuất ${fmt(got)} dòng`);
+  }catch(e){ if(e) toast("Lỗi xuất: "+(e.message||e), 6000); else toast("Đã hủy xuất"); }
+  $("prog").classList.add("hidden");
+}
+function prog(a,b){ $("progBar").style.width=Math.min(100,a/b*100)+"%"; $("progTxt").textContent=`${fmt(a)} / ${fmt(b)} dòng`; }
+$("progCancel").onclick=()=>{S.cancel=true};
+$("exportBtn").onclick=()=>exportCsv(null);
+$("bulkExport").onclick=()=>{ if(S.selAll) exportCsv(null); else exportCsv([...S.sel]); };
+
+/* ===== BỘ LỌC ĐÃ LƯU (lưu trên trình duyệt này) ===== */
+const VKEY="crm_saved_views";
+function getViews(){ try{ return JSON.parse(localStorage.getItem(VKEY)||"{}"); }catch(e){ return {}; } }
+function loadViews(){ const v=getViews(); $("viewSel").innerHTML='<option value="">— chọn —</option>'+Object.keys(v).map(k=>`<option>${esc(k)}</option>`).join(""); }
+$("saveViewBtn").onclick=()=>{ const n=prompt("Tên bộ lọc:"); if(!n) return; try{ const v=getViews(); v[n]=filterState(); localStorage.setItem(VKEY,JSON.stringify(v)); loadViews(); $("viewSel").value=n; toast("Đã lưu bộ lọc"); }catch(e){ toast("Trình duyệt không cho lưu"); } };
+$("viewSel").onchange=e=>{ const v=getViews()[e.target.value]; if(v){ setFilterState(v); refilter(); } };
+$("delViewBtn").onclick=()=>{ const n=$("viewSel").value; if(!n) return; const v=getViews(); delete v[n]; try{localStorage.setItem(VKEY,JSON.stringify(v));}catch(e){} loadViews(); };
+
+sb.auth.onAuthStateChange((ev)=>{ if(ev==="SIGNED_OUT") viewMode("login"); });
+boot();
+</script>
+</body>
+</html>
