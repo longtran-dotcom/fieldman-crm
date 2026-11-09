@@ -337,18 +337,18 @@ if(f.main) qb = qb.eq("main_industry", f.main);
 function applySort(qb, s){ return s==="name_asc" ? qb.order("name",{ascending:true}).order("id") : qb.order("monthly_revenue",{ascending:s==="rev_asc",nullsFirst:false}).order("id"); }
 const LIST_COLS = "id,name,tax_code,address,ward,province_id,region_id,business_line,monthly_revenue,monthly_tax,status,tier,phone,do_not_contact,tags,fieldman_code,main_industry,lat,lng,source";
 
-let loadSeq = 0;
+let loadSeq = 0, estCount = false;
 async function load(){
   const seq = ++loadSeq, f = filterState();
   $("resultInfo").textContent = "Đang tải…";
   let qb = applySort(applyFilters(sb.from("stores").select(LIST_COLS,{count:"exact"}), f), f.sort).range((S.page-1)*PAGE, S.page*PAGE-1);
-  let {data, error, count} = await qb;
-  if(error && /timeout|57014/i.test(error.message+error.code)){   // đếm chính xác quá chậm → ước lượng
+  estCount = false; let {data, error, count} = await qb;
+  if(error && /timeout|57014/i.test(error.message+error.code)){ estCount = true;   // đếm chính xác quá chậm → ước lượng
     ({data, error, count} = await applySort(applyFilters(sb.from("stores").select(LIST_COLS,{count:"planned"}), f), f.sort).range((S.page-1)*PAGE, S.page*PAGE-1));
   }
   if(seq !== loadSeq) return;
   if(error){ $("resultInfo").textContent = "Lỗi: " + error.message; return; }
-  S.rows = data || []; S.total = count ?? 0; render();
+  S.rows = data || []; S.total = count ?? 0; render(); if(estCount) loadCards();
 }
 function pages(){ return Math.max(1, Math.ceil(S.total/PAGE)); }
 function render(){
@@ -396,7 +396,8 @@ async function loadCards(){
   const tot = counts.reduce((a,b)=>a+b,0), cur=$("f_region").value;
   $("cards").innerHTML = `<div class="stat ${cur===""?"on":""}" data-region=""><b>${fmt(tot)}</b><span>Tất cả vùng</span></div>` +
     regs.map((r,i)=>`<div class="stat ${String(r.id)===cur?"on":""}" data-region="${r.id}"><b>${fmt(counts[i])}</b><span>${esc(r.name)}</span></div>`).join("");
-  document.querySelectorAll(".stat").forEach(el=>el.onclick=()=>{ $("f_region").value=el.dataset.region; fillProvinces(); refilter(); });
+  if(estCount){ const ri=regs.findIndex(r=>String(r.id)===cur); S.total = ri>=0 ? counts[ri] : tot; estCount=false; render(); }
+document.querySelectorAll(".stat").forEach(el=>el.onclick=()=>{ $("f_region").value=el.dataset.region; fillProvinces(); refilter(); });
 }
 
 /* phân trang */
